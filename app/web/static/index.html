@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead Decisioning Engine</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f8cff'/><circle cx='10' cy='11' r='3.2' fill='white'/><circle cx='22' cy='11' r='3.2' fill='white'/><circle cx='16' cy='22' r='3.2' fill='white'/><path d='M10 11L16 22L22 11' stroke='white' stroke-width='1.8' fill='none'/></svg>">
+<style>
+:root{
+  --bg:#0a0f1d;--panel:#111a2d;--panel2:#16213a;--line:#223052;--line2:#1b2744;--text:#e8edf7;--muted:#8e9ab5;
+  --blue:#4f8cff;--green:#2fbf71;--amber:#f5a524;--red:#ef4d5a;--violet:#9b7bff;--cyan:#27c3d9;--pink:#f06ba8;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -200px,#16244a 0%,var(--bg) 60%);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:1px solid var(--line);background:rgba(10,15,29,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;flex:none}
+header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+header .sub{color:var(--muted);font-size:12.5px}
+.chips{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12px;color:var(--muted);background:var(--panel)}
+.chip b{color:var(--text);font-weight:600}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.dot.live{background:var(--green);box-shadow:0 0 0 3px rgba(47,191,113,.18)}
+nav{display:flex;gap:4px;padding:0 22px;border-bottom:1px solid var(--line)}
+nav button{background:none;border:none;color:var(--muted);padding:11px 14px;cursor:pointer;font:inherit;border-bottom:2px solid transparent}
+nav button:hover{color:var(--text)}
+nav button.active{color:var(--text);border-bottom-color:var(--blue)}
+.tab{display:none;padding:16px 22px 30px}
+.tab.active{display:block}
+.live{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}
+.lower{display:block}
+#panel.cols{columns:3 360px;column-gap:16px}
+#panel.cols .card{break-inside:avoid;display:inline-block;width:100%}
+#panel td{overflow-wrap:anywhere}
+#panel td:last-child,#panel th:last-child{white-space:nowrap;text-align:right}
+.ovgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:1100px){.ovgrid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:650;display:flex;align-items:center;gap:8px}
+.card h3 .right{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.scn{padding:9px 10px;border:1px solid var(--line2);border-radius:9px;margin-bottom:7px;cursor:pointer;background:var(--panel2);transition:.15s}
+.scn:hover{border-color:var(--blue);transform:translateX(2px)}
+.scn.active{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.scn .t{font-weight:600;font-size:13px}
+.scn .p{color:var(--muted);font-size:11.8px;margin-top:2px;line-height:1.35}
+.scn .id{display:block;color:var(--muted);font-size:10.5px;font-family:Consolas,monospace;margin-bottom:2px}
+input,button.btn{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 10px}
+button.btn{cursor:pointer}
+button.btn:hover{border-color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.good{background:var(--green);border-color:var(--green);color:#06140c;font-weight:600}
+button.warn{background:var(--amber);border-color:var(--amber);color:#1c1200;font-weight:600}
+button.bad{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+button.link{background:none;border:none;color:var(--blue);cursor:pointer;padding:0;font:inherit;font-size:12px}
+a{color:var(--blue)}
+.row{display:flex;gap:8px;align-items:center}
+.muted{color:var(--muted)}.small{font-size:12px}.mono{font-family:Consolas,monospace}
+.graphwrap{display:flex;justify-content:center}
+#graphSvg{width:100%;height:auto;display:block}
+.node rect.box{fill:var(--panel2);stroke:var(--line);stroke-width:1.4}
+.node rect.accent{opacity:.9}
+.node text{fill:var(--text);font-size:17px;font-weight:600;text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+.node .sub{fill:#a9b4cc;font-size:13px;font-weight:400}
+.node.active rect.box{stroke:var(--blue);stroke-width:2.6;animation:pulse 1s infinite}
+.node.done rect.box{stroke:var(--green);fill:#12291f}
+.node.paused rect.box{stroke:var(--amber);fill:#2c2210;stroke-width:2.6}
+.node.failed rect.box{stroke:var(--red);fill:#2c1418}
+@keyframes pulse{50%{stroke-opacity:.3}}
+.edge{fill:none;stroke:#3a4b75;stroke-width:1.6}
+.edge.cond{stroke-dasharray:5 4}
+.edge.hot{stroke:var(--green);stroke-width:3;stroke-dasharray:none}
+.badge{font-size:12px;fill:#fff;font-weight:700}
+.badgebg{fill:var(--violet)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:6px;justify-content:center}
+.legend span i{display:inline-block;width:18px;height:0;border-top:2px solid #2f3d62;vertical-align:middle;margin-right:5px}
+.timeline{max-height:340px;overflow:auto}
+.ev{display:grid;grid-template-columns:56px 150px 64px 1fr;gap:10px;padding:6px 4px;border-bottom:1px solid var(--line2);font-size:12.5px;align-items:start}
+.ev .n{font-weight:600}
+.ev .ms{color:var(--muted);text-align:right;font-family:Consolas,monospace}
+.ev.sys .n{color:var(--violet)}.ev.fail .n{color:var(--red)}.ev.pause .n{color:var(--amber)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv>div:nth-child(odd){color:var(--muted)}
+.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.p-green{background:#15392a;color:#57e39a}.p-amber{background:#3a2d10;color:#ffc451}
+.p-red{background:#3d171c;color:#ff7a85}.p-blue{background:#16284d;color:#8bb3ff}.p-violet{background:#271f4d;color:#bba6ff}
+.p-gray{background:#222c44;color:#aab4c9}
+.prob{position:relative;height:26px;background:#1a2644;border-radius:6px;margin:8px 0 20px}
+.prob .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--blue));transition:width .6s}
+.prob .band{position:absolute;top:-3px;bottom:-3px;background:rgba(245,165,36,.2);border-left:1px dashed var(--amber);border-right:1px dashed var(--amber)}
+.prob .mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:#fff9}
+.prob .lbl{position:absolute;top:30px;font-size:10.5px;color:var(--muted);transform:translateX(-50%);white-space:nowrap}
+.prob .val{position:absolute;right:8px;top:4px;font-weight:700;font-size:13px;text-shadow:0 1px 2px #0008}
+.reason{display:grid;grid-template-columns:1fr 90px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
+.rbar{height:8px;border-radius:4px;background:#1a2644;position:relative}
+.rbar i{position:absolute;top:0;bottom:0;border-radius:4px}
+.checks div{font-size:13px;margin:3px 0}
+.msg{background:#0c1426;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;font-size:12.5px;margin-top:8px}
+.rev{border-left:2px solid var(--line);padding:2px 0 2px 10px;margin:6px 0;font-size:12.5px}
+.rev.fail{border-color:var(--red)}.rev.pass{border-color:var(--green)}
+.review{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset,0 0 30px rgba(245,165,36,.12)}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:26px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.tile .v{font-size:24px;font-weight:700;margin-top:2px}
+.tile .l{color:var(--muted);font-size:12px}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 4px}
+.mini div{background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px}
+.mini b{display:block;font-size:20px}
+.mini span{color:var(--muted);font-size:11.5px}
+.steps{counter-reset:s;margin:10px 0 0;padding:0;list-style:none}
+.steps li{counter-increment:s;display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:12.8px;margin:7px 0}
+.steps li::before{content:counter(s);width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line2)}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.hbar{height:10px;border-radius:5px;background:var(--blue)}
+.note{background:#17162e;border:1px solid #352f66;border-radius:10px;padding:10px 12px;font-size:13px;color:#d4ccff}
+pre{background:#0c1426;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:12px;max-height:420px;margin:8px 0 0}
+.runs div{font-size:12px;padding:5px 4px;border-bottom:1px solid var(--line2);cursor:pointer;display:flex;gap:6px;align-items:center}
+.runs div:hover{background:var(--panel2)}
+#kg{width:100%;height:320px;display:block;background:#0c1426;border:1px solid var(--line2);border-radius:10px}
+.kgl{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:6px}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (max-width:1300px){.live{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><svg width="20" height="20" viewBox="0 0 32 32"><circle cx="10" cy="11" r="3.4" fill="white"/><circle cx="22" cy="11" r="3.4" fill="white"/><circle cx="16" cy="23" r="3.4" fill="white"/><path d="M10 11L16 23L22 11" stroke="white" stroke-width="2" fill="none"/></svg></div>
+  <div>
+    <h1>Lead Decisioning Engine</h1>
+    <div class="sub">AI-driven multi-agent marketing &amp; decision system &middot; lead triage &middot; campaign classification</div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+<nav>
+  <button class="active" data-tab="live">Live run</button>
+  <button data-tab="model">Models &amp; evaluation</button>
+  <button data-tab="batch">Batch &amp; metrics</button>
+  <button data-tab="arch">Architecture</button>
+</nav>
+
+<!-- ============================ LIVE ============================ -->
+<section class="tab active" id="tab-live">
+<div class="live">
+  <div>
+    <div class="card">
+      <h3>Demo scenarios</h3>
+      <div id="scenarios"></div>
+      <div class="small muted" id="tip" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <h3>Any lead</h3>
+      <div class="row">
+        <input id="leadInput" placeholder="L0000123" style="flex:1;min-width:0" class="mono">
+        <button class="btn primary" id="runBtn">Run</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="randomBtn" style="flex:1">Random lead</button>
+        <button class="btn" id="resetBtn" title="Clears Redis state and Neo4j decision nodes">Reset state</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recent runs <span class="right"><button class="link" id="refreshRuns">refresh</button></span></h3>
+      <div class="runs" id="runs"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h3>LangGraph workflow <span class="right muted small" id="runLabel">select a scenario to start</span></h3>
+      <div class="graphwrap"><svg id="graphSvg" viewBox="0 0 1260 480" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="legend">
+        <span><i></i>edge</span>
+        <span><i style="border-top-style:dashed"></i>conditional edge</span>
+        <span><i style="border-top-color:var(--green)"></i>taken this run</span>
+        <span><span class="dot" style="background:var(--blue)"></span>running</span>
+        <span><span class="dot" style="background:var(--amber)"></span>paused for human</span>
+        <span><span class="dot" style="background:var(--violet)"></span>xN loop iterations</span>
+      </div>
+    </div>
+    <div class="lower">
+      <div class="card" id="traceCard">
+        <h3>Agent trace <span class="right muted small" id="traceStats"></span></h3>
+        <div class="timeline" id="timeline"><div class="empty">Each agent step appears here with its latency and a one-line explanation.</div></div>
+      </div>
+      <div id="panel"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================ MODEL ============================ -->
+<section class="tab" id="tab-model"><div id="modelBody" class="empty">Loading...</div></section>
+
+<!-- ============================ BATCH ============================ -->
+<section class="tab" id="tab-batch">
+  <div class="card">
+    <h3>Concurrent batch run</h3>
+    <div class="row">
+      <span class="muted">Leads</span><input id="batchN" type="number" value="100" min="1" max="500" style="width:90px">
+      <button class="btn primary" id="batchBtn">Run batch</button>
+      <span class="muted small" id="batchStatus">Runs random leads through the full graph on 8 worker threads.</span>
+    </div>
+  </div>
+  <div id="batchResult"></div>
+  <div class="grid2">
+    <div class="card"><h3>Per-agent latency (from Redis) <span class="right"><button class="link" id="refreshMetrics">refresh</button></span></h3><div id="latency"></div></div>
+    <div class="card"><h3>Human review queue</h3><div id="queue"></div></div>
+  </div>
+</section>
+
+<!-- ============================ ARCH ============================ -->
+<section class="tab" id="tab-arch">
+  <div class="grid2">
+    <div class="card">
+      <h3>Components</h3>
+      <table>
+        <tr><th>Layer</th><th>Technology</th><th>Role</th></tr>
+        <tr><td>Orchestration</td><td>LangGraph</td><td>StateGraph of 11 agents with a parallel fan-out and join, conditional routing, a bounded critic loop, <span class="mono">interrupt()</span> for human review, and checkpointed state</td></tr>
+        <tr><td>Lead triage</td><td>scikit-learn</td><td>Logistic regression in a ColumnTransformer pipeline, selected by CV, with per-lead reason codes</td></tr>
+        <tr><td>Campaign classification</td><td>scikit-learn</td><td>KMeans (k=4) on standardised ROAS / CPL / CTR / trend. Centroids are ranked into Scale, Maintain, Optimize and Pause</td></tr>
+        <tr><td>A/B selection</td><td>SciPy</td><td>Chi-square significance gate, falling back to Thompson sampling</td></tr>
+        <tr><td>Fast state</td><td>Redis</td><td>Short-term memory, frequency caps (TTL), campaign cache, run event lists + pub/sub, latency metrics</td></tr>
+        <tr><td>Relationship state</td><td>Neo4j</td><td>Lead, Campaign, Industry and Persona graph. Used for peer-conversion insight, and every Decision node is linked to its lead and campaign</td></tr>
+        <tr><td>API + live stream</td><td>Flask + WebSockets</td><td>REST endpoints for runs, review and batch. A WebSocket pushes every trace event</td></tr>
+        <tr><td>Deployment</td><td>Docker Compose</td><td>Services: app, Redis 7 and Neo4j 5</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Reliability principles</h3>
+      <div class="small" style="line-height:1.75">
+        <b>Fail closed.</b> Compliance rules run before any model, so a blocked lead never reaches scoring.<br>
+        <b>Know when not to decide.</b> Predictions inside the uncertainty band go to a human.<br>
+        <b>Independent verification.</b> A separate critic checks every draft. The generator never grades itself.<br>
+        <b>Bounded loops.</b> Revisions are capped at 3. After that the lead escalates, so it can never loop forever.<br>
+        <b>Explainable.</b> Every triage decision carries reason codes, and every decision is written to the graph.<br>
+        <b>Honest evaluation.</b> The seed labels were checked for signal first (AUC 0.50), and that finding is reported.<br>
+        <b>PII minimised.</b> Contact details are masked at the context boundary, before traces or logs.
+      </div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card" id="services"></div>
+    <div class="card">
+      <h3>Graph generated from the compiled LangGraph <span class="right mono small">get_graph().draw_mermaid()</span></h3>
+      <pre id="mermaid" style="max-height:300px"></pre>
+    </div>
+  </div>
+</section>
+
+<script>
+// ------------------------------------------------------------------ workflow layout
+// Left-to-right layout (viewBox 1180 x 480) so the workflow uses the full width of the card.
+const POS = {
+  "__start__":[36,240,"START"], "load_context":[180,240,"Context / Memory","Redis + Neo4j + LTM","cyan"],
+  "compliance_gate":[370,240,"Compliance Gate","consent, cap, opt-out","red"],
+  "lead_triage":[560,140,"Lead Triage","scikit-learn","blue"], "campaign_optimizer":[560,340,"Campaign Optimizer","KMeans + A/B","blue"],
+  "decision_router":[750,240,"Decision Router","join + route","violet"],
+  "engagement":[950,85,"Engagement","draft / revise","pink"], "nurture":[950,240,"Nurture","low-cost track","green"],
+  "human_review":[950,395,"Human Review","interrupt()","amber"],
+  "quality_critic":[1160,85,"Quality Critic","6 checks","red"],
+  "commit":[1160,240,"Commit","Redis + Neo4j + audit","green"], "suppress":[1160,395,"Suppress","record reason","green"],
+  "__end__":[1160,318,"END"]
+};
+const W=176,H=60;
+let EDGES=[], HEALTH=null;
+const svg=document.getElementById('graphSvg');
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue('--'+v).trim();
+
+function edgePath(s,t){
+  const [x1,y1]=POS[s],[x2,y2]=POS[t];
+  const hw=s.startsWith('__')?32:W/2, tw=t.startsWith('__')?32:W/2, hh=H/2, th=t.startsWith('__')?16:H/2;
+  const k=`${s}>${t}`;
+  const special={
+    'engagement>quality_critic':`M${x1+hw},${y1} L${x2-tw},${y2}`,
+    'quality_critic>engagement':`M${x1},${y1-hh} C${x1},${y1-80} ${x2},${y2-80} ${x2},${y2-hh}`,   // revision loop
+    'quality_critic>commit':`M${x1},${y1+hh} L${x2},${y2-th}`,
+    'quality_critic>human_review':`M${x1-40},${y1+hh} C${x1-80},${y1+140} ${x2+85},${y2-150} ${x2+45},${y2-hh}`,
+    'nurture>commit':`M${x1+hw},${y1} L${x2-tw},${y2}`,
+    'human_review>nurture':`M${x1},${y1-hh} L${x2},${y2+hh}`,
+    'human_review>engagement':`M${x1-hw},${y1} C${x1-hw-50},${y1} ${x2-tw-50},${y2} ${x2-tw},${y2}`,
+    'human_review>commit':`M${x1+hw},${y1-12} C${x1+hw+30},${y1-12} ${x2-tw-30},${y2+14} ${x2-tw},${y2+14}`,
+    'human_review>suppress':`M${x1+hw},${y1} L${x2-tw},${y2}`,
+    'compliance_gate>suppress':`M${x1},${y1+hh} C${x1},470 ${x2},470 ${x2},${y2+hh}`,
+    'commit>__end__':`M${x1},${y1+hh} L${x2},${y2-16}`,
+    'suppress>__end__':`M${x1},${y1-hh} L${x2},${y2+16}`,
+  };
+  if(special[k])return special[k];
+  const mx=(x1+hw+x2-tw)/2;
+  return `M${x1+hw},${y1} C${mx},${y1} ${mx},${y2} ${x2-tw},${y2}`;
+}
+function drawGraph(){
+  svg.innerHTML='';
+  const defs=el('defs',{},svg);
+  for(const [id,c] of [['arrow','#2f3d62'],['arrowHot','#2fbf71']]){
+    const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);
+    el('path',{d:'M0,0 L10,5 L0,10 z',fill:c},m);
+  }
+  const eg=el('g',{},svg);
+  for(const e of EDGES){
+    if(!POS[e.source]||!POS[e.target])continue;
+    el('path',{d:edgePath(e.source,e.target),class:'edge'+(e.conditional?' cond':''),id:`e-${e.source}-${e.target}`,'marker-end':'url(#arrow)'},eg);
+  }
+  for(const [id,[x,y,label,sub,accent]] of Object.entries(POS)){
+    const term=id.startsWith('__');
+    const g=el('g',{class:'node',id:`n-${id}`},svg);
+    const w=term?64:W, h=term?32:H;
+    el('rect',{class:'box',x:x-w/2,y:y-h/2,width:w,height:h,rx:term?16:10},g);
+    if(accent) el('rect',{class:'accent',x:x-w/2+1,y:y-h/2+9,width:4,height:h-18,rx:2,fill:css(accent)},g);
+    const t=el('text',{x,y:sub?y-9:y},g);t.textContent=label;
+    if(sub){const s=el('text',{x,y:y+13,class:'sub'},g);s.textContent=sub}
+    const bg=el('g',{id:`b-${id}`,style:'display:none'},g);
+    el('rect',{x:x+w/2-16,y:y-h/2-9,width:28,height:17,rx:8,class:'badgebg'},bg);
+    el('text',{x:x+w/2-2,y:y-h/2,class:'badge','text-anchor':'middle','dominant-baseline':'middle'},bg);
+  }
+}
+function setNode(id,cls){const n=document.getElementById('n-'+id);if(n)n.setAttribute('class','node'+(cls?' '+cls:''))}
+function hotEdge(s,t){const e=document.getElementById(`e-${s}-${t}`);if(e){e.classList.add('hot');e.setAttribute('marker-end','url(#arrowHot)')}}
+function setBadge(id,n){const b=document.getElementById('b-'+id);if(!b)return;b.style.display=n>1?'':'none';b.querySelector('text').textContent='x'+n}
+
+// ------------------------------------------------------------------ run state
+let current=null, wsOpen=false, pollTimer=null;
+const buffers={};
+let view=null;
+function freshView(){return {visits:{},recent:[],t0:null,state:{},revs:[],review:null,outcome:null,finished:false,total:0,leadId:null,seen:0,kg:null,redis:null}}
+
+function resetLive(label){
+  view=freshView();drawGraph();
+  document.getElementById('timeline').innerHTML='';
+  document.getElementById('runLabel').textContent=label||'';
+  document.getElementById('traceStats').textContent='';
+  renderPanel();
+}
+function showRun(runId,label){
+  current=runId;resetLive(label);
+  (buffers[runId]||[]).forEach(apply);
+  view.seen=(buffers[runId]||[]).length;
+  if(!wsOpen)startPolling(runId);
+}
+// Fallback when the WebSocket is unavailable: poll the run's event list from Redis.
+function startPolling(runId){
+  clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    if(current!==runId||wsOpen){clearInterval(pollTimer);return}
+    const r=await api(`/api/runs/${runId}`);
+    const evs=r.events||[];
+    for(const ev of evs.slice(view.seen))apply(ev);
+    view.seen=evs.length;buffers[runId]=evs;
+    if(['completed','failed'].includes(r.run.status))clearInterval(pollTimer);
+  },350);
+}
+
+// ------------------------------------------------------------------ events
+function onEvent(ev){
+  if(!ev.run_id)return;
+  (buffers[ev.run_id]=buffers[ev.run_id]||[]).push(ev);
+  const keys=Object.keys(buffers);if(keys.length>400)delete buffers[keys[0]];
+  if(ev.run_id===current){apply(ev);view.seen++}
+  if(ev.type==='run_finished'||ev.type==='awaiting_review')debounceRuns();
+}
+function edgeExists(s,t){return EDGES.some(e=>e.source===s&&e.target===t)}
+function apply(ev){
+  if(view.t0===null)view.t0=ev.ts;
+  const rel=((ev.ts-view.t0)*1000).toFixed(0);
+  if(ev.type==='run_started'){view.leadId=ev.lead_id;setNode('__start__','done');addRow(rel,'run started','',`lead ${ev.lead_id}`,'sys')}
+  if(ev.type==='node_started'){
+    const n=ev.node;view.visits[n]=(view.visits[n]||0)+1;setBadge(n,view.visits[n]);setNode(n,'active');
+    if(n==='load_context')hotEdge('__start__','load_context');
+    for(const f of view.recent.slice(-3))if(f!==n&&edgeExists(f,n))hotEdge(f,n);
+  }
+  if(ev.type==='node_finished'){
+    setNode(ev.node,'done');view.recent.push(ev.node);view.total+=ev.ms;
+    addRow(rel,ev.node,ev.ms,ev.summary);
+    absorb(ev.node,ev.update||{});
+  }
+  if(ev.type==='node_paused'){setNode(ev.node,'paused');addRow(rel,ev.node,ev.ms,'paused: waiting for a human decision (state checkpointed)','pause')}
+  if(ev.type==='node_failed'){setNode(ev.node,'failed');addRow(rel,ev.node,'',ev.error,'fail')}
+  if(ev.type==='awaiting_review'){view.review=ev.request;renderPanel();loadLeadState()}
+  if(ev.type==='review_submitted'){view.review=null;view.recent=['human_review'];addRow(rel,'review submitted','',`${ev.action}${ev.note?': '+ev.note:''}`,'sys');renderPanel()}
+  if(ev.type==='run_finished'){
+    const last=view.recent[view.recent.length-1];hotEdge(last,'__end__');setNode('__end__','done');
+    view.outcome=ev.outcome;view.finished=true;
+    addRow(rel,'run finished','',`${ev.outcome.status} / ${ev.outcome.route}, wall ${(ev.duration_s*1000).toFixed(0)} ms`,'sys');
+    renderPanel();loadLeadState();
+  }
+  if(ev.type==='run_failed')addRow(rel,'run failed','',ev.error,'fail');
+  document.getElementById('traceStats').textContent=view.total?`agent compute ${view.total.toFixed(1)} ms`:'';
+}
+function absorb(node,u){
+  Object.assign(view.state,u);
+  if(node==='load_context')view.leadId=u.lead.lead_id;
+  if(node==='engagement')view.revs.push({draft:u.draft,critique:null});
+  if(node==='quality_critic'&&view.revs.length)view.revs[view.revs.length-1].critique=u.critique;
+  renderPanel();
+}
+function addRow(rel,node,ms,text,cls=''){
+  const tl=document.getElementById('timeline');
+  const d=document.createElement('div');d.className='ev fade '+cls;
+  d.innerHTML=`<div class="muted mono">+${rel}ms</div><div class="n">${esc(node)}</div><div class="ms">${ms!==''&&ms!==undefined?ms+'ms':''}</div><div>${esc(text||'')}</div>`;
+  tl.appendChild(d);tl.scrollTop=tl.scrollHeight;
+}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=x=>(x*100).toFixed(0)+'%';
+
+// ------------------------------------------------------------------ state written by the run
+async function loadLeadState(){
+  const id=view.leadId;if(!id)return;
+  const [kg,st]=await Promise.all([api(`/api/leads/${id}/graph`),api(`/api/leads/${id}`)]);
+  if(view.leadId!==id)return;
+  view.kg=kg;view.redis=st;renderPanel();
+}
+const KG_COLORS={Lead:'#4f8cff',Campaign:'#f5a524',Industry:'#2fbf71',Persona:'#9b7bff',Decision:'#f06ba8'};
+function drawKG(){
+  const s=document.getElementById('kg');if(!s||!view.kg)return;
+  const {nodes,edges}=view.kg;s.innerHTML='';
+  if(!nodes.length)return;
+  const Wd=390,Ht=320,cx=Wd/2,cy=Ht/2;
+  const P={};nodes.forEach((n,i)=>{const a=i/nodes.length*2*Math.PI;P[n.id]={x:cx+Math.cos(a)*110,y:cy+Math.sin(a)*95,vx:0,vy:0}});
+  P[nodes[0].id].x=cx;P[nodes[0].id].y=cy;
+  // small deterministic force layout: repulsion between all nodes, springs along relationships
+  for(let it=0;it<400;it++){
+    const cool=1-it/400;
+    for(const a of nodes)for(const b of nodes){if(a===b)continue;const pa=P[a.id],pb=P[b.id];const dx=pa.x-pb.x,dy=pa.y-pb.y,d2=dx*dx+dy*dy+1,d=Math.sqrt(d2);const f=5200/d2;pa.vx+=dx/d*f;pa.vy+=dy/d*f}
+    for(const e of edges){const a=P[e.source],b=P[e.target];if(!a||!b)continue;const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+.01,f=(d-78)*.08;a.vx+=dx/d*f;a.vy+=dy/d*f;b.vx-=dx/d*f;b.vy-=dy/d*f}
+    for(const n of nodes){const p=P[n.id];if(n===nodes[0]){p.vx=p.vy=0;continue}p.vx+=(cx-p.x)*.01;p.vy+=(cy-p.y)*.01;p.x+=Math.max(-8,Math.min(8,p.vx))*cool;p.y+=Math.max(-8,Math.min(8,p.vy))*cool;p.vx*=.5;p.vy*=.5;p.x=Math.max(30,Math.min(Wd-30,p.x));p.y=Math.max(20,Math.min(Ht-26,p.y))}
+  }
+  s.setAttribute('viewBox',`0 0 ${Wd} ${Ht}`);
+  for(const e of edges){const a=P[e.source],b=P[e.target];if(!a||!b)continue;
+    el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#33456f','stroke-width':1.2},s);
+    if(e.source===nodes[0].id){const t=el('text',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-3,fill:'#6f7ea3','font-size':7,'text-anchor':'middle'},s);t.textContent=e.type}}
+  for(const n of nodes){const p=P[n.id],r=n===nodes[0]?15:11;
+    const c=el('circle',{cx:p.x,cy:p.y,r,fill:KG_COLORS[n.label]||'#888',stroke:'#0c1426','stroke-width':2},s);
+    el('title',{},c).textContent=`(:${n.label}) ${n.name}`;
+    const t=el('text',{x:p.x,y:p.y+r+9,fill:'#c9d2e6','font-size':8.5,'text-anchor':'middle'},s);t.textContent=n.name.length>18?n.name.slice(0,17)+'...':n.name}
+}
+
+// ------------------------------------------------------------------ panel
+function healthPill(h){return `<span class="pill ${{Scale:'p-green',Maintain:'p-blue',Optimize:'p-amber',Pause:'p-red'}[h]||'p-gray'}">${h}</span>`}
+function tierPill(t){return `<span class="pill ${{Hot:'p-red',Warm:'p-amber',Cold:'p-blue'}[t]||'p-gray'}">${t}</span>`}
+function overview(){
+  const h=HEALTH||{model:{},neo4j:{},redis:{}};
+  return `<div class="card fade"><h3>About this system</h3><div class="ovgrid"><div>
+    <div style="font-size:14px">A LangGraph multi-agent system that makes automated <b>lead triage</b> and <b>campaign classification</b> decisions. Redis and Neo4j carry state between agents. It explains every decision, and it escalates to a human when it's unsure.</div>
+    <div class="mini">
+      <div><b>11</b><span>agents in the graph</span></div>
+      <div><b>5,000</b><span>leads, 30 campaigns</span></div>
+      <div><b>${h.model.roc_auc??'-'}</b><span>lead-triage ROC-AUC (held out)</span></div>
+      <div><b>${(h.neo4j.nodes??0).toLocaleString()}</b><span>Neo4j nodes</span></div>
+    </div></div><div>
+    <ol class="steps" style="margin-top:0">
+      <li><span><b>Context agent</b> merges long-term memory, short-term memory from Redis, and peer history from Neo4j.</span></li>
+      <li><span><b>Compliance gate</b> checks consent, the frequency cap and opt-outs before any model runs.</span></li>
+      <li><span><b>Triage</b> (scikit-learn) and the <b>campaign optimizer</b> (KMeans) run in parallel.</span></li>
+      <li><span><b>Router</b> sends the lead to sales handoff, engage, nurture or a human.</span></li>
+      <li><span><b>Engagement</b> drafts outreach, and an independent <b>critic</b> sends it back until it passes.</span></li>
+      <li><span><b>Commit</b> writes the decision to Redis, Neo4j and the audit log.</span></li>
+    </ol>
+    <div class="small muted" style="margin-top:10px">Start with <b>Hot lead</b> on the left.</div></div></div></div>`;
+}
+function renderPanel(){
+  const p=document.getElementById('panel');const s=view?view.state:{};
+  const running=!!(view&&view.t0!==null);
+  document.getElementById('traceCard').style.display=running?'':'none';
+  p.classList.toggle('cols',!!(view&&s.lead));
+  if(!view||!s.lead){p.innerHTML=overview();return}
+  let h='';
+  if(view.review){
+    const r=view.review;
+    h+=`<div class="card review fade"><h3>Human review required <span class="right pill p-amber">graph paused</span></h3>
+      <div class="small" style="margin-bottom:8px">${esc(r.reason)}</div>
+      <div class="kv"><div>p(convert)</div><div><b>${r.p_convert.toFixed(3)}</b> ${tierPill(r.tier)}</div></div>
+      <input id="reviewNote" placeholder="note (optional)" style="width:100%;margin:10px 0">
+      <div class="row"><button class="btn good" onclick="review('approve')">Approve outreach</button>
+      <button class="btn warn" onclick="review('nurture')">Nurture</button>
+      <button class="btn bad" onclick="review('reject')">Reject</button></div>
+      <div class="small muted" style="margin-top:8px">Execution is paused inside <span class="mono">human_review</span> with the state checkpointed. Your decision resumes it through <span class="mono">Command(resume=...)</span>.</div></div>`;
+  }
+  if(view.outcome){
+    const o=view.outcome;const good=o.status==='committed';
+    const capped=!good&&/cap clears/.test(o.reason||'');
+    const color=good?'var(--green)':capped?'var(--amber)':'var(--red)';
+    const pill=good?'p-green':capped?'p-amber':'p-red';
+    h+=`<div class="card fade" style="border-color:${color}"><h3>Outcome <span class="right pill ${pill}">${capped?'blocked by frequency cap':o.status}</span></h3>
+      ${capped?`<div class="note" style="margin-bottom:10px;background:#2a2210;border-color:#5a4718;color:#ffe2a6">
+        <b>Working as designed.</b> An earlier run already contacted this lead, and it armed a 72-hour frequency cap in Redis (<span class="mono">contact:${esc(view.leadId)}</span>). The compliance gate read that key and blocked the second contact before the model was called. This is how state written by one agent run is enforced by another.
+        <div style="margin-top:8px"><button class="btn warn" onclick="clearCap()">Clear cap &amp; run again</button></div></div>`:''}
+      <div class="kv"><div>Action</div><div><b>${o.route}</b>${o.channel?' via '+o.channel:''}</div>
+      ${o.reason?`<div>Reason</div><div>${esc(o.reason)}</div>`:''}
+      ${o.campaign_id?`<div>Campaign</div><div>${o.campaign_id}</div>`:''}
+      ${o.revisions!==undefined?`<div>Revisions</div><div>${o.revisions}</div>`:''}
+      <div>Human reviewed</div><div>${o.human_reviewed?'yes ('+o.reviewer_action+')':'no'}</div></div></div>`;
+  }
+  const L=s.lead,M=s.memory||{},ltm=M.long_term||{},pe=M.peers||{};
+  h+=`<div class="card"><h3>Lead <span class="right mono small">${L.lead_id}</span></h3><div class="kv">
+    <div>Profile</div><div>${L.industry} / ${L.persona} / ${L.region}</div>
+    <div>Company</div><div>${L.company_size} employees, via ${L.source}</div>
+    <div>Lead score</div><div>${L.lead_score}</div>
+    <div>Contact</div><div class="mono small">${L.email} ${L.phone} <span class="muted">(masked)</span></div>
+    <div>Interests</div><div>${(ltm.interests||['none on record']).join(', ')}</div>
+    <div>Best time</div><div>${ltm.best_contact_time||'unknown'}</div>
+    <div>Peers (Neo4j)</div><div>${pe.peers} similar leads, ${pct(pe.peer_conversion_rate||0)} converted${(pe.top_converting_channels||[]).length?' (top: '+pe.top_converting_channels.join(', ')+')':''}</div>
+    <div>Prior decisions</div><div>${(M.prior_decisions||[]).length? M.prior_decisions.map(d=>d.route).join(', '):'none'}</div></div></div>`;
+  if(s.compliance){
+    const c=s.compliance;
+    h+=`<div class="card"><h3>Compliance gate <span class="right pill ${c.allowed?'p-green':'p-red'}">${c.allowed?'pass':'blocked'}</span></h3><div class="checks">
+      ${c.checks.map(k=>`<div>${k.passed?'<span style="color:var(--green)">&#10003;</span>':'<span style="color:var(--red)">&#10007;</span>'} <b>${k.check.replace(/_/g,' ')}</b> <span class="muted">${esc(k.detail)}</span></div>`).join('')}</div></div>`;
+  }
+  if(s.triage){
+    const t=s.triage,th=t.thresholds;
+    const maxImp=Math.max(...t.reasons.map(r=>Math.abs(r.impact)),0.01);
+    h+=`<div class="card"><h3>Lead triage ${tierPill(t.tier)} ${t.uncertain?'<span class="pill p-amber">uncertain</span>':''}<span class="right muted small">scikit-learn</span></h3>
+      <div class="prob"><div class="fill" style="width:${t.p_convert*100}%"></div>
+        <div class="band" style="left:${(th.hot-th.band)*100}%;width:${th.band*200}%"></div>
+        <div class="mark" style="left:${th.cold*100}%"></div><div class="mark" style="left:${th.hot*100}%"></div>
+        <div class="lbl" style="left:${th.cold*100}%">cold &lt; ${th.cold}</div><div class="lbl" style="left:${th.hot*100}%">hot &ge; ${th.hot}</div>
+        <div class="val">p = ${t.p_convert.toFixed(3)}</div></div>
+      <div class="small muted" style="margin-bottom:4px">Top drivers (contribution to log-odds)</div>
+      ${t.reasons.map(r=>`<div class="reason"><div>${esc(r.factor)}</div><div class="rbar"><i style="left:${r.impact>0?50:50-Math.abs(r.impact)/maxImp*50}%;width:${Math.abs(r.impact)/maxImp*50}%;background:${r.impact>0?'var(--green)':'var(--red)'}"></i></div></div>`).join('')}
+    </div>`;
+  }
+  if(s.route) h+=`<div class="card"><h3>Decision router <span class="right pill p-violet">${s.route}</span></h3><div class="small">${esc(s.route_reason)}</div></div>`;
+  if(s.campaign){
+    const c=s.campaign,pr=c.primary,cr=c.creative||{},v=cr.variant||{};
+    h+=`<div class="card"><h3>Campaign optimizer <span class="right muted small">Redis cache ${pr.cache}</span></h3><div class="kv">
+      <div>Campaign</div><div>${pr.campaign_id} ${esc(pr.name||'')} ${healthPill(pr.health)}</div>
+      <div>Why</div><div class="small">${esc(pr.health_reason)}</div>
+      <div>KPIs</div><div class="small">ROAS ${pr.kpis.roas} / CPL $${pr.kpis.cpl_usd} / CTR ${(pr.kpis.ctr*100).toFixed(2)}%</div>
+      ${c.reassigned_to?`<div>Reassigned</div><div><b>${c.reassigned_to}</b> ${healthPill(c.active.health)}</div>`:''}
+      <div>Creative</div><div>${v.variant_id||'-'} <span class="muted small">(${v.channel||''}, ${v.tone||''})</span></div>
+      <div>Selection</div><div class="small">${esc(cr.method||'')}</div></div></div>`;
+  }
+  if(view.revs.length){
+    const last=view.revs[view.revs.length-1].draft;
+    h+=`<div class="card"><h3>Engagement &amp; quality critic <span class="right muted small">${view.revs.length} draft${view.revs.length>1?'s':''}</span></h3>
+      ${view.revs.map(r=>{const c=r.critique;const cls=c?(c.passed?'pass':'fail'):'';
+        return `<div class="rev ${cls}"><b>v${r.draft.revision}</b> ${r.draft.channel} ${r.draft.changes.length?'<span class="muted">- '+esc(r.draft.changes.join('; '))+'</span>':''}<br>
+        ${c?(c.passed?'<span style="color:var(--green)">critic: pass</span>':'<span style="color:var(--red)">critic: '+esc(c.issues.map(i=>i.code+' ('+i.detail+')').join('; '))+'</span>'):'<span class="muted">awaiting critic...</span>'}</div>`}).join('')}
+      <div class="kv" style="margin-top:8px"><div>Channel</div><div><b>${last.channel}</b> at ${last.send_window}</div>
+      <div>Subject</div><div>${esc(last.subject)}</div><div>CTA</div><div>${esc(last.cta)}</div>
+      ${last.sdr_task?`<div>SDR task</div><div class="small">${esc(last.sdr_task)}</div>`:''}</div>
+      <div class="msg">${esc(last.body)}</div><div class="small muted" style="margin-top:4px">${last.body.length} chars</div></div>`;
+  }
+  if(s.nurture_plan){
+    const n=s.nurture_plan;
+    h+=`<div class="card"><h3>Nurture plan</h3><div class="kv"><div>Track</div><div>${n.track}</div><div>Channel</div><div>${n.channel}</div>
+      <div>Cadence</div><div>${n.touches} touches, every ${n.cadence_days} days</div><div>Re-score</div><div>in ${n.rescore_in_days} days</div></div></div>`;
+  }
+  if(view.kg){
+    const live=HEALTH&&HEALTH.neo4j.live;
+    h+=`<div class="card fade"><h3>Lead graph ${live?'<span class="pill p-green">Neo4j live</span>':'<span class="pill p-gray">in-memory</span>'}<span class="right"><button class="link" onclick="toggleCypher()">Cypher</button>${live?` &middot; <a class="small" href="http://localhost:7474/browser/" target="_blank">Neo4j Browser</a>`:''}</span></h3>
+      <svg id="kg"></svg>
+      <div class="kgl">${Object.entries(KG_COLORS).map(([k,c])=>`<span><span class="dot" style="background:${c}"></span>${k}</span>`).join('')}</div>
+      <pre id="cypher" style="display:none">${esc(view.kg.cypher.replace('$id',`'${view.leadId}'`))}</pre></div>`;
+  }
+  if(view.redis){
+    const r=view.redis,live=HEALTH&&HEALTH.redis.live;
+    const cap=r.frequency_cap,stm=r.short_term_memory||{};
+    h+=`<div class="card fade"><h3>State in Redis ${live?'<span class="pill p-green">Redis live</span>':'<span class="pill p-gray">fakeredis</span>'}</h3>
+      <table class="mono small"><tr><th>key</th><th>value</th><th>TTL</th></tr>
+      <tr><td>contact:${view.leadId}</td><td>${cap?esc(cap.channel)+' / '+esc(cap.run_id):'<span class="muted">(none)</span>'}</td><td>${cap?cap.ttl_hours+'h':'-'}</td></tr>
+      <tr><td>stm:${view.leadId}</td><td>${Object.keys(stm).length?esc(Object.entries(stm).filter(([k])=>k!=='at').map(([k,v])=>`${k}=${v}`).join(', ')):'<span class="muted">(none)</span>'}</td><td>24h</td></tr>
+      <tr><td>run:${esc(current)}:events</td><td>${(buffers[current]||[]).length} events</td><td>-</td></tr></table>
+      <div class="small muted" style="margin-top:6px">The next run for this lead reads these keys. The contact key arms the frequency cap.</div></div>`;
+  }
+  p.innerHTML=h;
+  drawKG();
+}
+async function clearCap(){
+  const id=view.leadId;
+  await api(`/api/leads/${id}/clear-cap`,{method:'POST'});
+  run(id,'Re-run after clearing cap');
+}
+function toggleCypher(){const c=document.getElementById('cypher');if(c)c.style.display=c.style.display==='none'?'block':'none'}
+
+// ------------------------------------------------------------------ actions
+const api=(u,o={})=>fetch(u,{headers:{'Content-Type':'application/json'},...o}).then(r=>r.json());
+async function run(leadId,label){
+  const r=await api('/api/runs',{method:'POST',body:JSON.stringify({lead_id:leadId})});
+  if(r.error){alert(r.error);return}
+  showRun(r.run_id,`${label?label+' - ':''}${leadId} - ${r.run_id}`);
+}
+async function review(action){
+  const note=(document.getElementById('reviewNote')||{}).value||'';
+  await api(`/api/runs/${current}/review`,{method:'POST',body:JSON.stringify({action,note})});
+  if(!wsOpen)startPolling(current);
+}
+async function openRun(runId){
+  const r=await api(`/api/runs/${runId}`);
+  buffers[runId]=r.events;showRun(runId,`${r.run.lead_id} - ${runId} (replay)`);
+  document.querySelector('nav button[data-tab=live]').click();
+}
+let runsTimer=null;function debounceRuns(){clearTimeout(runsTimer);runsTimer=setTimeout(loadRuns,600)}
+async function loadRuns(){
+  const runs=await api('/api/runs?limit=15');
+  const st={completed:'p-green',awaiting_review:'p-amber',failed:'p-red',running:'p-blue'};
+  document.getElementById('runs').innerHTML=runs.length?runs.map(r=>`<div onclick="openRun('${r.run_id}')"><span class="mono">${r.lead_id}</span><span class="pill ${st[r.status]||'p-gray'}" style="font-size:10.5px">${r.route||r.status}</span><span class="muted" style="margin-left:auto">${r.source||''}</span></div>`).join(''):'<div class="muted">No runs yet.</div>';
+}
+function renderChips(){
+  const h=HEALTH;if(!h)return;
+  const c=(ok,label,val)=>`<span class="chip"><span class="dot ${ok?'live':''}" style="${ok?'':'background:var(--amber)'}"></span>${label} <b>${val}</b></span>`;
+  document.getElementById('chips').innerHTML=
+    c(true,'LangGraph','11 agents')+
+    c(h.redis.live,'Redis',h.redis.live?'live':'fallback')+
+    c(h.neo4j.live,'Neo4j',(h.neo4j.live?'live':'fallback')+` &middot; ${h.neo4j.nodes.toLocaleString()} nodes`)+
+    c(true,'scikit-learn',`AUC ${h.model.roc_auc}`)+
+    c(wsOpen,'WebSocket',wsOpen?'live':'polling');
+}
+async function loadHealth(){
+  HEALTH=await api('/api/health');renderChips();
+  if(!view||!view.state.lead)renderPanel();
+  const r=HEALTH.redis,n=HEALTH.neo4j;
+  document.getElementById('services').innerHTML=`<h3>Live services</h3><table>
+    <tr><th>Service</th><th>Status</th><th>Details</th></tr>
+    <tr><td>Redis</td><td>${r.live?'<span class="pill p-green">live</span>':'<span class="pill p-amber">fakeredis</span>'}</td><td class="small mono">${esc(r.backend)} &middot; ${r.keys} keys</td></tr>
+    <tr><td>Neo4j</td><td>${n.live?'<span class="pill p-green">live</span>':'<span class="pill p-amber">in-memory</span>'}</td><td class="small mono">${esc(n.backend)} &middot; ${n.nodes.toLocaleString()} nodes, ${n.relationships.toLocaleString()} rels, ${n.decisions} decisions</td></tr>
+    <tr><td>WebSocket</td><td>${wsOpen?'<span class="pill p-green">live</span>':'<span class="pill p-amber">polling</span>'}</td><td class="small mono">/ws</td></tr></table>
+    ${n.live?`<div class="small" style="margin-top:10px"><a href="http://localhost:7474/browser/" target="_blank">Open Neo4j Browser</a> (user <span class="mono">neo4j</span>). Try:</div>
+    <pre>MATCH (l:Lead)-[:HAS_DECISION]->(d:Decision)-[:FOR_CAMPAIGN]->(c:Campaign)
+RETURN l, d, c LIMIT 50</pre>`:''}`;
+}
+async function loadScenarios(){
+  const s=await api('/api/scenarios');
+  document.getElementById('scenarios').innerHTML=s.scenarios.map(x=>`<div class="scn" data-lead="${x.lead_id}" data-title="${esc(x.title)}" title="Shows: ${esc(x.shows)}"><span class="id">${x.lead_id}</span><div class="t">${esc(x.title)}</div><div class="p">${esc(x.path)}</div></div>`).join('');
+  document.getElementById('tip').textContent=s.tip;
+  document.querySelectorAll('.scn').forEach(d=>d.onclick=()=>{document.querySelectorAll('.scn').forEach(x=>x.classList.remove('active'));d.classList.add('active');run(d.dataset.lead,d.dataset.title)});
+}
+async function loadModel(){
+  const [m,cp]=await Promise.all([api('/api/model'),api('/api/campaigns')]);const t=m.test_metrics;
+  const maxI=Math.max(...m.permutation_importance.map(x=>x.importance),0.001);
+  let calSvg=`<svg viewBox="0 0 300 220" style="width:100%;max-width:440px"><line x1="30" y1="190" x2="290" y2="10" stroke="#33456f" stroke-dasharray="4 4"/>
+    <line x1="30" y1="190" x2="290" y2="190" stroke="#33456f"/><line x1="30" y1="190" x2="30" y2="10" stroke="#33456f"/>
+    <text x="160" y="212" fill="#8e9ab5" font-size="10" text-anchor="middle">predicted probability</text>
+    <text x="10" y="100" fill="#8e9ab5" font-size="10" text-anchor="middle" transform="rotate(-90 10 100)">observed rate</text>`;
+  const pts=m.calibration.map(c=>[30+c.predicted*260,190-c.observed*180,c.n]);
+  calSvg+=`<polyline points="${pts.map(p=>p[0]+','+p[1]).join(' ')}" fill="none" stroke="#4f8cff" stroke-width="2"/>`;
+  pts.forEach(p=>calSvg+=`<circle cx="${p[0]}" cy="${p[1]}" r="${3+Math.sqrt(p[2])/5}" fill="#4f8cff" fill-opacity=".75"><title>n=${p[2]}</title></circle>`);
+  calSvg+='</svg>';
+  // campaign clusters: ROAS vs CPL
+  const cs=cp.campaigns,rx=cs.map(c=>c.roas),ry=cs.map(c=>c.cpl_usd);
+  const [x0,x1]=[Math.min(...rx)-.3,Math.max(...rx)+.3],[y0,y1]=[Math.min(...ry)-.3,Math.max(...ry)+.3];
+  const HC={Scale:'#2fbf71',Maintain:'#4f8cff',Optimize:'#f5a524',Pause:'#ef4d5a'};
+  let sc=`<svg viewBox="0 0 320 230" style="width:100%;max-width:460px"><line x1="36" y1="196" x2="310" y2="196" stroke="#33456f"/><line x1="36" y1="196" x2="36" y2="10" stroke="#33456f"/>
+    <text x="173" y="220" fill="#8e9ab5" font-size="10" text-anchor="middle">ROAS (higher is better)</text>
+    <text x="12" y="103" fill="#8e9ab5" font-size="10" text-anchor="middle" transform="rotate(-90 12 103)">CPL $ (lower is better)</text>`;
+  cs.forEach(c=>{const x=36+(c.roas-x0)/(x1-x0)*270,y=196-(c.cpl_usd-y0)/(y1-y0)*180;
+    sc+=`<circle cx="${x}" cy="${y}" r="6" fill="${HC[c.health]}" fill-opacity=".85" stroke="#0c1426"><title>${c.campaign_id} ${c.health}: ${c.health_reason}</title></circle>`});
+  sc+='</svg>';
+  document.getElementById('modelBody').className='';
+  document.getElementById('modelBody').innerHTML=`
+  <div class="note" style="margin-bottom:14px"><b>Data integrity check first.</b> The seed dataset's own conversion labels have no relationship to any feature. Cross-validated ROC-AUC is <b>${m.seed_label_sanity_check_auc}</b>, where 0.50 is a coin flip, so reporting a model trained on them would be misleading. Outcomes are instead simulated from a documented process (<span class="mono">app/ml/labels.py</span>) in which engagement, fit and recency drive intent, plus noise. The pipeline, evaluation and decision policy are the same ones that would run on real CRM outcomes.</div>
+  <h3 class="muted" style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin:4px 0 10px">Lead triage: scikit-learn classifier</h3>
+  <div class="tiles">
+    <div class="tile"><div class="l">Test ROC-AUC</div><div class="v">${t.roc_auc}</div></div>
+    <div class="tile"><div class="l">Baseline: lead_score only</div><div class="v">${t.baseline_lead_score_roc_auc}</div></div>
+    <div class="tile"><div class="l">PR-AUC (base rate ${pct(m.base_rate)})</div><div class="v">${t.pr_auc}</div></div>
+    <div class="tile"><div class="l">Brier score</div><div class="v">${t.brier}</div></div>
+    <div class="tile"><div class="l">Hot precision / recall</div><div class="v">${pct(t.hot_precision)} / ${pct(t.hot_recall)}</div></div>
+    <div class="tile"><div class="l">Seed-label sanity AUC</div><div class="v" style="color:var(--amber)">${m.seed_label_sanity_check_auc}</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Calibration (test set)</h3>${calSvg}<div class="small muted">Points near the diagonal mean a predicted 0.7 really converts about 70% of the time. That is what makes the probability thresholds and the uncertainty band meaningful.</div></div>
+    <div class="card"><h3>Permutation importance (drop in ROC-AUC)</h3>${m.permutation_importance.slice(0,10).map(x=>`<div class="reason"><div>${x.feature}</div><div class="rbar"><i style="left:0;width:${Math.max(x.importance,0)/maxI*100}%;background:var(--blue)"></i></div></div>`).join('')}</div>
+    <div class="card"><h3>Decision tiers on held-out leads</h3><table><tr><th>Tier</th><th>Share</th><th>Observed conversion</th></tr>
+      ${['Hot','Warm','Cold'].filter(k=>m.tier_stats[k]).map(k=>`<tr><td>${tierPill(k)}</td><td>${pct(m.tier_stats[k].share)}</td><td>${pct(m.tier_stats[k].observed_conversion)}</td></tr>`).join('')}</table></div>
+    <div class="card"><h3>Model selection (5-fold CV ROC-AUC)</h3><table>${Object.entries(m.cv_auc_comparison).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td><td>${k===m.model?'<span class="pill p-green">chosen</span>':''}</td></tr>`).join('')}</table>
+      <div class="small muted" style="margin-top:8px">Logistic regression is kept unless boosting beats it by more than 0.02 AUC, because per-lead reason codes from the coefficients make each automated decision explainable. Trained ${m.trained_at} on ${m.n_train} leads, tested on ${m.n_test}.</div></div>
+  </div>
+  <h3 class="muted" style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin:6px 0 10px">Campaign classification: scikit-learn KMeans (k=4)</h3>
+  <div class="grid2">
+    <div class="card"><h3>30 campaigns by cluster <span class="right small">${Object.entries(HC).map(([k,c])=>`<span style="margin-left:8px"><span class="dot" style="background:${c}"></span>${k} ${cp.cluster_sizes[k]||0}</span>`).join('')}</span></h3>${sc}<div class="small muted">Hover a point to see its explanation. Clustering uses ROAS, CPL, CTR and week-over-week trend. This chart shows two of the four dimensions.</div></div>
+    <div class="card"><h3>Cluster centroids (original units)</h3><table><tr><th>Cluster</th><th>ROAS</th><th>CPL $</th><th>CTR</th><th>WoW trend</th></tr>
+      ${['Scale','Maintain','Optimize','Pause'].map(k=>{const c=cp.centroids[k];return `<tr><td>${healthPill(k)}</td><td>${c.roas.toFixed(2)}</td><td>${c.cpl_usd.toFixed(2)}</td><td>${(c.ctr*100).toFixed(2)}%</td><td>${(c.trend>0?'+':'')+(c.trend*100).toFixed(0)}%</td></tr>`}).join('')}</table>
+      <div class="small muted" style="margin-top:8px">Clusters are unlabeled, so the centroids are ranked by a weighted health score (ROAS +1, trend +0.5, CTR +0.3, CPL -0.5) and named in that order. Leads on a <b>Pause</b> campaign are reassigned to the best healthy campaign.</div></div>
+  </div>`;
+}
+async function loadMetrics(){
+  const m=await api('/api/metrics');
+  const rows=Object.entries(m.node_latency).sort((a,b)=>b[1].calls-a[1].calls);
+  document.getElementById('latency').innerHTML=rows.length?`<table><tr><th>Agent</th><th>Calls</th><th>Avg ms</th></tr>${rows.map(([k,v])=>`<tr><td>${k}</td><td>${v.calls}</td><td>${v.avg_ms}</td></tr>`).join('')}</table>
+    <div class="small muted" style="margin-top:8px">Graph: ${m.graph.nodes.toLocaleString()} nodes, ${m.graph.relationships.toLocaleString()} relationships, ${m.graph.decisions} decision nodes</div>`:'<div class="muted">No runs yet.</div>';
+  const q=await api('/api/review-queue');
+  document.getElementById('queue').innerHTML=q.length?q.map(r=>`<div class="runs"><div onclick="openRun('${r.run_id}')"><span class="mono">${r.lead_id}</span> <span class="muted small">${esc((r.review_request||{}).reason||'').slice(0,80)}</span><span class="pill p-amber" style="margin-left:auto">open</span></div></div>`).join(''):'<div class="muted">Queue empty.</div>';
+}
+async function runBatch(){
+  const n=+document.getElementById('batchN').value||50;
+  document.getElementById('batchStatus').textContent=`running ${n} leads...`;
+  const r=await api('/api/batch',{method:'POST',body:JSON.stringify({n})});
+  document.getElementById('batchStatus').textContent=`done: ${r.n} leads in ${r.wall_time_s}s (${(r.n/r.wall_time_s).toFixed(1)} leads/s)`;
+  const max=Math.max(...Object.values(r.routes));
+  const colors={sales_handoff:'var(--red)',engage:'var(--amber)',nurture:'var(--blue)',suppressed:'#6b7896',awaiting_review:'var(--violet)'};
+  document.getElementById('batchResult').innerHTML=`<div class="card fade"><h3>Route distribution</h3>${Object.entries(r.routes).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="reason" style="grid-template-columns:140px 1fr 50px"><div>${k}</div><div><div class="hbar" style="width:${v/max*100}%;background:${colors[k]||'var(--blue)'}"></div></div><div class="mono">${v}</div></div>`).join('')}</div>`;
+  loadMetrics();loadRuns();loadHealth();
+}
+
+// ------------------------------------------------------------------ websocket
+function connect(){
+  let ws;
+  try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){setTimeout(connect,2000);return}
+  ws.onopen=()=>{wsOpen=true;renderChips()};
+  ws.onmessage=m=>{const ev=JSON.parse(m.data);if(ev.type!=='ping')onEvent(ev)};
+  ws.onclose=()=>{wsOpen=false;renderChips();if(current&&view&&!view.finished)startPolling(current);setTimeout(connect,1500)};
+}
+
+// ------------------------------------------------------------------ boot
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+  if(b.dataset.tab==='batch')loadMetrics();
+  if(b.dataset.tab==='arch')loadHealth();
+});
+document.getElementById('runBtn').onclick=()=>{const v=document.getElementById('leadInput').value.trim();if(v)run(v.toUpperCase())};
+document.getElementById('leadInput').onkeydown=e=>{if(e.key==='Enter')document.getElementById('runBtn').click()};
+document.getElementById('randomBtn').onclick=()=>run('L'+String(1+Math.floor(Math.random()*5000)).padStart(7,'0'),'Random');
+document.getElementById('resetBtn').onclick=async()=>{await api('/api/reset',{method:'POST'});loadRuns();loadHealth();current=null;resetLive('state cleared');};
+document.getElementById('refreshRuns').onclick=loadRuns;
+document.getElementById('refreshMetrics').onclick=loadMetrics;
+document.getElementById('batchBtn').onclick=runBatch;
+(async()=>{
+  connect();
+  const g=await api('/api/graph');EDGES=g.edges;document.getElementById('mermaid').textContent=g.mermaid;
+  view=freshView();drawGraph();renderPanel();
+  loadHealth();loadScenarios();loadRuns();loadModel();
+})();
+</script>
+</body>
+</html>

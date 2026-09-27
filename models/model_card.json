@@ -1,0 +1,178 @@
+{
+  "model": "logistic_regression",
+  "trained_at": "2026-09-27T05:28:20+00:00",
+  "features": [
+    "lead_score",
+    "rfm_score",
+    "n_touches",
+    "n_positive",
+    "n_callback",
+    "n_negative",
+    "n_unsubscribe",
+    "n_replies",
+    "n_clicks",
+    "days_since_active",
+    "source",
+    "company_size",
+    "industry",
+    "persona",
+    "region",
+    "preferred_channel"
+  ],
+  "n_train": 4000,
+  "n_test": 1000,
+  "base_rate": 0.3172,
+  "label_source": "simulated (see app/ml/labels.py) -- seed labels carry no signal",
+  "seed_label_sanity_check_auc": 0.5,
+  "cv_auc_comparison": {
+    "logistic_regression": 0.85,
+    "hist_gradient_boosting": 0.836
+  },
+  "test_metrics": {
+    "roc_auc": 0.863,
+    "pr_auc": 0.758,
+    "brier": 0.1349,
+    "baseline_lead_score_roc_auc": 0.632,
+    "hot_threshold": 0.6,
+    "hot_precision": 0.762,
+    "hot_recall": 0.514,
+    "confusion_at_hot_threshold": {
+      "tn": 632,
+      "fp": 51,
+      "fn": 154,
+      "tp": 163
+    }
+  },
+  "tier_stats": {
+    "Hot": {
+      "share": 0.214,
+      "observed_conversion": 0.7616822429906542
+    },
+    "Warm": {
+      "share": 0.277,
+      "observed_conversion": 0.4043321299638989
+    },
+    "Cold": {
+      "share": 0.509,
+      "observed_conversion": 0.0825147347740668
+    }
+  },
+  "calibration": [
+    {
+      "predicted": 0.042,
+      "observed": 0.052,
+      "n": 289
+    },
+    {
+      "predicted": 0.151,
+      "observed": 0.13,
+      "n": 154
+    },
+    {
+      "predicted": 0.244,
+      "observed": 0.172,
+      "n": 116
+    },
+    {
+      "predicted": 0.346,
+      "observed": 0.276,
+      "n": 76
+    },
+    {
+      "predicted": 0.447,
+      "observed": 0.4,
+      "n": 85
+    },
+    {
+      "predicted": 0.544,
+      "observed": 0.667,
+      "n": 66
+    },
+    {
+      "predicted": 0.644,
+      "observed": 0.593,
+      "n": 59
+    },
+    {
+      "predicted": 0.75,
+      "observed": 0.772,
+      "n": 57
+    },
+    {
+      "predicted": 0.85,
+      "observed": 0.797,
+      "n": 59
+    },
+    {
+      "predicted": 0.945,
+      "observed": 0.949,
+      "n": 39
+    }
+  ],
+  "permutation_importance": [
+    {
+      "feature": "n_unsubscribe",
+      "importance": 0.101
+    },
+    {
+      "feature": "n_callback",
+      "importance": 0.0831
+    },
+    {
+      "feature": "lead_score",
+      "importance": 0.0541
+    },
+    {
+      "feature": "n_positive",
+      "importance": 0.0459
+    },
+    {
+      "feature": "n_negative",
+      "importance": 0.0317
+    },
+    {
+      "feature": "days_since_active",
+      "importance": 0.0156
+    },
+    {
+      "feature": "n_replies",
+      "importance": 0.0151
+    },
+    {
+      "feature": "company_size",
+      "importance": 0.0091
+    },
+    {
+      "feature": "persona",
+      "importance": 0.0061
+    },
+    {
+      "feature": "source",
+      "importance": 0.0042
+    },
+    {
+      "feature": "rfm_score",
+      "importance": 0.004
+    },
+    {
+      "feature": "region",
+      "importance": 0.0009
+    },
+    {
+      "feature": "n_touches",
+      "importance": 0.0006
+    },
+    {
+      "feature": "preferred_channel",
+      "importance": 0.0005
+    },
+    {
+      "feature": "n_clicks",
+      "importance": -0.0
+    },
+    {
+      "feature": "industry",
+      "importance": -0.0007
+    }
+  ]
+}

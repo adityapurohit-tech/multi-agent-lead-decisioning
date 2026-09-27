@@ -1,0 +1,18 @@
+# Orchestration
+langgraph==1.2.12
+# API + live stream
+flask==3.1.3
+flask-sock==0.7.0
+# State
+redis==8.1.0
+fakeredis==2.38.0        # in-process fallback when no Redis server is running
+neo4j==6.3.1
+networkx==3.7            # in-memory graph fallback when no Neo4j server is running
+# ML / analytics
+scikit-learn==1.7.1
+scipy==1.16.1
+pandas==2.3.2
+numpy==2.3.2
+joblib==1.5.2
+# Dev
+pytest==9.1.1

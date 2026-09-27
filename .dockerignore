@@ -1,0 +1,7 @@
+venv
+legacy
+outputs
+models
+notebooks
+__pycache__
+*.pyc
